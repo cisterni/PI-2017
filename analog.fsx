@@ -10,6 +10,8 @@ type AnalogClock() as this =
 
   let mutable offscreen = new Bitmap(this.Width, this.Height)
 
+  let mutable timeoffset = System.TimeSpan()
+
   do
     timer.Interval <- 1000
     timer.Tick.Add(fun _ -> this.Invalidate())
@@ -47,7 +49,7 @@ type AnalogClock() as this =
       g.Transform <- t
     
     g.Transform <- t0
-    let now = System.DateTime.Now
+    let now = System.DateTime.Now + timeoffset
     let h = (single(now.Hour * 60 + now.Minute) / (12.f * 60.f)) * 360.f
     let m = (single(now.Minute) / 60.f ) * 360.f
     let s = single(now.Second) * 6.f
@@ -69,8 +71,24 @@ type AnalogClock() as this =
 
     let gg = e.Graphics
     gg.DrawImage(offscreen, 0, 0)
+  
+  member this.TimeOffset
+    with get() = timeoffset
+    and set(v) =
+      if timeoffset <> v then
+        timeoffset <- v
+        this.Invalidate()
+
 let ff = new Form(TopMost=true)
-let clock = new AnalogClock(Dock=DockStyle.Fill)
+let clocks = ResizeArray<_>()
+for i in 0 .. 8 do
+  let clock = new AnalogClock()
+  clock.Left <- i * clock.Width
+  clocks.Add(clock)
+  ff.Controls.Add(clock)
+//let clock = new AnalogClock(Dock=DockStyle.Fill)
 //clock.BackColor <- Color.Red
-ff.Controls.Add(clock)
 ff.Show()
+
+clocks.[0].BackColor <- Color.Yellow
+clocks.[0].TimeOffset <- System.TimeSpan(6, 0, 0)
