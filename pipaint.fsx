@@ -4,7 +4,7 @@ open System.Drawing
 type PiPaint() as this =
   inherit UserControl()
 
-  let points = [| PointF(0.f, 0.f); PointF(100.f, 100.f) |]
+  let points = ResizeArray<_>([| PointF(0.f, 0.f); PointF(100.f, 100.f) |])
   let R = 5.0f
   let mutable drag = None
   let handleRect (p:PointF) (r:single) =
@@ -17,18 +17,30 @@ type PiPaint() as this =
     sqr x1 + sqr y1 <= sqr r
 
   do
-    this.SetStyle(ControlStyles.OptimizedDoubleBuffer, true)
+    this.SetStyle(ControlStyles.AllPaintingInWmPaint ||| ControlStyles.OptimizedDoubleBuffer, true)
   
   override this.OnMouseDown e =
+    // let (|>) x f = f x
+    // f (g x) posso scrivere x |> g |> f
+    // let add x y = x + y
+    // let inc = add 1  
     // Pick correlation
-    match (points |> Array.tryFindIndex(fun p -> isInHandle p e.X e.Y R)) with
-    | Some idx -> drag <- Some idx
-    | None -> ()
+    // Array.tryFindIndex (fun p -> isInHandle p e.X e.Y R)) points
+    match (points |> Seq.tryFindIndex(fun p -> isInHandle p e.X e.Y R)) with
+    | Some idx ->
+      let p = points.[idx]
+      drag <- Some (idx, single(e.X) - p.X, single(e.Y) - p.Y)
+      
+    | None -> 
+      let p = PointF(single e.X, single e.Y)
+      points.Add(p)
+      drag <- Some (points.Count - 1, 0.f, 0.f)
+      this.Invalidate()
   
   override this.OnMouseMove e =
     match drag with
-    | Some idx -> 
-      points.[idx] <- PointF(single e.X, single e.Y)
+    | Some (idx, dx, dy) -> 
+      points.[idx] <- PointF(single e.X - dx, single e.Y - dy)
       this.Invalidate()
     | None -> ()
   
@@ -37,10 +49,10 @@ type PiPaint() as this =
   
   override this.OnPaint e =
     let g = e.Graphics
-    let p1, p2 = points.[0], points.[1]
-    g.DrawLine(Pens.Black, p1, p2)
-    g.DrawEllipse(Pens.Red, handleRect p1 5.f)
-    g.DrawEllipse(Pens.Red, handleRect p2 5.f)
+    g.DrawLines(Pens.Black, points.ToArray())
+    points |> Seq.iter(fun p ->
+      g.DrawEllipse(Pens.Red, handleRect p 5.f)
+    )
 
 let f = new Form(Dock=DockStyle.Fill,Text= "PiPaint")
 // f.Dock <- DockStyle.Fill
@@ -48,3 +60,4 @@ let f = new Form(Dock=DockStyle.Fill,Text= "PiPaint")
 let paint = new PiPaint(Dock=DockStyle.Fill)
 f.Controls.Add(paint)
 f.Show()
+//paint.BackColor <- Color.Red
