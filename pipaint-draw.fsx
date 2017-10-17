@@ -32,9 +32,6 @@ type PiPaint() as this =
     let g = e.Graphics
     if points.Count > 2 then
       g.DrawLines(Pens.Black, points.ToArray())
-      points |> Seq.iter(fun p ->
-        g.DrawEllipse(Pens.Red, handleRect p 5.f)
-      )
 
 let f = new Form(Dock=DockStyle.Fill,Text= "PiPaint")
 // f.Dock <- DockStyle.Fill
