@@ -25,6 +25,8 @@ module Utility =
     RectangleF(single r.X, single r.Y, single r.Width, single r.Height)
 
 
+type ScrollDir = Up | Down | Left | Right | NoScroll
+
 type PiPaint() as this =
   inherit UserControl()
 
@@ -50,14 +52,26 @@ type PiPaint() as this =
 
   let upkey = Rectangle(20, 0, 30, 30)
 
+  let scrollUp () =
+    transform.Translate(0.f, 10.f)
+    this.Invalidate()
+  
+  let mutable scrollDir = NoScroll
+
+  let scrollTimer = new Timer(Interval=100)
+
   do
     this.SetStyle(ControlStyles.AllPaintingInWmPaint ||| ControlStyles.OptimizedDoubleBuffer, true)
+    scrollTimer.Tick.Add(fun _ ->
+      match scrollDir with
+      | Up -> scrollUp()
+      | NoScroll -> scrollTimer.Stop()
+      | _ -> ()
+    )
 
   override this.OnKeyDown e =
     match e.KeyCode with
-    | Keys.W -> 
-      transform.Translate(0.f, 10.f)
-      this.Invalidate()
+    | Keys.W -> scrollUp()
     | Keys.A -> 
       transform.Translate(10.f, 0.f)
       this.Invalidate()
@@ -83,8 +97,9 @@ type PiPaint() as this =
 
   override this.OnMouseDown e =
     if upkey.Contains(e.Location) then
-      transform.Translate(0.f, 10.f)
-      this.Invalidate()      
+      scrollDir <- Up
+      if not(scrollTimer.Enabled) then
+        scrollTimer.Start() 
     else
       let mp = transformPoint transform.V2W (PointF(single(e.X), single(e.Y)))
       match (points |> Seq.tryFindIndex(fun p -> isInHandle p R mp)) with
@@ -107,6 +122,7 @@ type PiPaint() as this =
   
   override this.OnMouseUp e =
     drag <- None
+    scrollDir <- NoScroll
   
   override this.OnPaint e =
     let g = e.Graphics
@@ -121,7 +137,8 @@ type PiPaint() as this =
     g.Transform <- t
     let r = Rectangle(20, 0, 30, 30)
     g.DrawRectangle(Pens.Red, r)
-    g.DrawString("W", this.Font, Brushes.Red, r |> Utility.Rect2RectF)
+    let sz = g.MeasureString("W", this.Font)
+    g.DrawString("W", this.Font, Brushes.Red, PointF(20.f + (30.f - sz.Width) / 2.f, (30.f - sz.Height) / 2.f))
 
 
 let f = new Form(Dock=DockStyle.Fill,Text= "PiPaint")
