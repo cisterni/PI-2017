@@ -3,28 +3,81 @@
     <head>
         <title>Prova di animazione</title>
         <script type="text/javascript">
-        function moveBox() {
-            var x = 0, dx = 2
-            var y = 0, dy = 3
-
-            var b = document.getElementById('box')
-
-            setInterval(function () {
-                b.style.left = x + 'px'
-                b.style.top = y + 'px'
-                if (x > 500 || x < 0) dx *= -1
-                if (y > 500 || y < 0) dy *= -1
-                x += dx
-                y += dy
-            }, 20)
+        function createTrail (b) {
+            var ret = document.createElement('div')
+            var props = [ "position", "background", "width", "height", "left", "top" ]
+            for (var i = 0; i < props.length; i++)
+              ret.style[props[i]] = b.style[props[i]]
+            ret.style.opacity = 0.5
+            // In alternativa
+            // for (v in b.style)
+            //   ret.style[v] = b.style[v]
+            return ret;
         }
+
+        function Box(sb) {
+            var b = document.createElement('div')
+            var sz = 25
+            sb.appendChild(b)
+            b.style.width = sz + 'px'
+            b.style.height = sz + 'px'
+            b.style.background = 'red'
+            b.style.position = 'absolute'
+            this.X = 0
+            this.Y = 0
+            this.dx = 2
+            this.dy = 3
+            this.Element = b
+            var trail = new Array(10)
+            var counter = 0
+            var nexttrail = 0
+
+            for (var i = 0; i < trail.length; i++) {
+                trail[i] = createTrail(b)
+            }
+
+            this.UpdateBox = function () {
+                if (counter++ % 5 == 0) {
+                  var t = trail[nexttrail]
+                  if (!t.parentNode)
+                    b.parentNode.appendChild(t)
+                  t.style.left = b.style.left
+                  t.style.top = b.style.top
+                  nexttrail = (nexttrail + 1) % trail.length
+                }
+                b.style.left = this.X + 'px'
+                b.style.top = this.Y + 'px'
+                if (this.X + sz > sb.offsetWidth || this.X < 0) this.dx *= -1
+                if (this.Y + sz > sb.offsetHeight || this.Y < 0) this.dy *= -1
+                this.X += this.dx
+                this.Y += this.dy                
+            }
+        }
+
+        var snakes = new Array()
+
+        window.addEventListener('load', function () {
+            var sb =document.getElementById('snakebox')
+            var t = null
+            sb.addEventListener('click', function (e) {
+                var box = new Box(sb)
+                box.X = e.offsetX
+                box.Y = e.offsetY
+                snakes.push(box)
+                if (!t) {
+                    t = setInterval(function () {
+                        for (var i = 0; i < snakes.length; i++)
+                          snakes[i].UpdateBox()
+                    }, 20)
+                }
+            })
+        })
         </script>
     </head>
     <body>
         <h1>Esempio di animazione</h1>
         Il quadrato si anima se clicchi.
-        <div style="background: yellow; width:500px; height: 500px; position: absolute">
-        <div onclick="moveBox()" id="box" style="position: absolute; width: 50px; height: 50px; background: red"></div>
+        <div id="snakebox" style="background: yellow; width:50%; height: 50%; position: absolute">
         </div>
     </body>
 </html>
